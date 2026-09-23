@@ -35,9 +35,10 @@ export function createApp(): Express {
   );
 
   // CORS Configuration
+  const normalizedFrontend = env.FRONTEND_URL.replace(/\/+$/, "");
   app.use(
     cors({
-      origin: [env.FRONTEND_URL],
+      origin: [normalizedFrontend, `${normalizedFrontend}/`, "http://localhost:3000"],
       credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
       allowedHeaders: ["Content-Type", "Authorization", "x-request-id", "x-csrf-token"],

@@ -1,6 +1,8 @@
 import { ApiResponse, ApiErrorResponse } from "@top1/shared";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (typeof window !== "undefined" ? "/api/v1" : "http://localhost:5000/api/v1");
 
 export class ApiClientError extends Error {
   public readonly code: string;

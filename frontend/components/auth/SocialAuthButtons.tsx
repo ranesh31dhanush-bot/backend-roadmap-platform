@@ -4,7 +4,9 @@ import React from "react";
 
 export function SocialAuthButtons() {
   const handleGoogleAuth = () => {
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+    const backendUrl =
+      process.env.NEXT_PUBLIC_API_URL ||
+      (typeof window !== "undefined" ? "/api/v1" : "http://localhost:5000/api/v1");
     window.location.href = `${backendUrl}/auth/google`;
   };
 
