@@ -6,7 +6,11 @@ import { HealthCheckResponse } from "@top1/shared";
 const router = Router();
 
 // Primary health & liveness probe (supports GET /health and GET /health/live)
-router.get(["/", "/live"], (_req: Request, res: Response) => {
+router.get("/", (_req: Request, res: Response) => {
+  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+router.get("/live", (_req: Request, res: Response) => {
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
 });
 
