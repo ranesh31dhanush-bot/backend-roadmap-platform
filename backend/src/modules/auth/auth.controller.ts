@@ -270,7 +270,8 @@ export class AuthController {
 
       // Redirect to frontend dashboard or onboarding
       const redirectTarget = result.user.isOnboarded ? "/dashboard" : "/onboarding";
-      res.redirect(`${env.FRONTEND_URL}${redirectTarget}`);
+      const frontendBase = env.FRONTEND_URL.replace(/\/+$/, "");
+      res.redirect(`${frontendBase}${redirectTarget}`);
     } catch (err) {
       next(err);
     }
