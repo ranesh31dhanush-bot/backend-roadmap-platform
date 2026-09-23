@@ -218,8 +218,11 @@ The MongoDB database is seeded with ready-to-use demo accounts for testing both 
 ### Q: How do I test the rate limiter?
 **A:** The backend enforces rate limits on public authentication endpoints (100 requests per 15-minute window for standard endpoints; 5 requests per 15-minute window on failed login attempts). If exceeded, the API returns `429 Too Many Requests` with a `Retry-After` header.
 
-### Q: Where is curriculum and progress data stored?
-**A:** All curriculum nodes, user profiles, progress records, custom links, notes, and quiz submissions are persisted in MongoDB Atlas (`mongodb+srv://...`). The in-memory fallback cache ensures fast P95 response times.
+### Q: How does Google OAuth authenticate and remember existing users?
+**A:** When learners sign in with Google, the platform exchanges the authorization code directly with Google's OAuth2 endpoints (`https://oauth2.googleapis.com/token` and `https://www.googleapis.com/oauth2/v3/userinfo`). It retrieves the real Google user ID (`sub`), verified email, name, and profile picture. If the user already exists (or registered previously with that email), the platform links the account and recognizes their `isOnboarded` status—returning learners go directly to `/dashboard` without repeating onboarding.
+
+### Q: How does the Render keep-alive GitHub Action prevent free tier spin-down?
+**A:** On Render's free tier, services spin down after 15 minutes of inactivity. The repository includes an automated GitHub Action workflow (`.github/workflows/keep-alive.yml`) scheduled to ping `${{ vars.BACKEND_URL }}/health` every 10 minutes (`*/10 * * * *`). This keeps the backend awake 24/7 with zero cold starts.
 
 ---
 

@@ -11,6 +11,7 @@ import { env } from "../../config/env.js";
 import { ACCESS_TOKEN_EXPIRY_SECONDS, REFRESH_TOKEN_EXPIRY_SECONDS } from "./jwt.service.js";
 import { ApiSuccessResponse } from "@top1/shared";
 import { AppError } from "../../utils/appError.js";
+import { logger } from "../../utils/logger.js";
 
 const isProduction = env.NODE_ENV === "production";
 
@@ -244,20 +245,88 @@ export class AuthController {
     try {
       const { code } = googleAuthCallbackSchema.parse(req.query);
 
-      // In production, exchange code with Google API. In development/testing/mock mode, support simulated profile
-      let googleProfile = {
-        googleId: `google_${code}`,
-        email: `learner_${code}@example.com`,
-        displayName: "Google Learner",
-        avatarUrl: "https://lh3.googleusercontent.com/a/default",
+      let googleProfile: {
+        googleId: string;
+        email: string;
+        displayName: string;
+        avatarUrl?: string;
       };
 
-      // Mock override for testing
-      if (req.query.mockEmail) {
-        googleProfile.email = req.query.mockEmail as string;
-      }
-      if (req.query.mockGoogleId) {
-        googleProfile.googleId = req.query.mockGoogleId as string;
+      const clientId = process.env.GOOGLE_CLIENT_ID;
+      const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+      const callbackUrl =
+        process.env.GOOGLE_CALLBACK_URL || "http://localhost:5000/api/v1/auth/google/callback";
+
+      const isRealOAuth =
+        clientId &&
+        clientSecret &&
+        !clientId.startsWith("mock_") &&
+        !req.query.mockEmail;
+
+      if (isRealOAuth) {
+        // Exchange authorization code for tokens
+        const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: new URLSearchParams({
+            code,
+            client_id: clientId,
+            client_secret: clientSecret,
+            redirect_uri: callbackUrl,
+            grant_type: "authorization_code",
+          }),
+        });
+
+        if (!tokenRes.ok) {
+          const errBody = await tokenRes.text();
+          logger.error({ status: tokenRes.status, errBody }, "Google OAuth token exchange failed");
+          throw AppError.badRequest("Failed to exchange authorization code with Google");
+        }
+
+        const tokenData = (await tokenRes.json()) as {
+          access_token: string;
+          id_token: string;
+          token_type: string;
+        };
+
+        // Fetch user profile from Google UserInfo endpoint
+        const userInfoRes = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+          headers: {
+            Authorization: `Bearer ${tokenData.access_token}`,
+          },
+        });
+
+        if (!userInfoRes.ok) {
+          const errBody = await userInfoRes.text();
+          logger.error({ status: userInfoRes.status, errBody }, "Google OAuth userinfo fetch failed");
+          throw AppError.badRequest("Failed to retrieve Google user profile");
+        }
+
+        const userInfo = (await userInfoRes.json()) as {
+          sub: string;
+          email: string;
+          name?: string;
+          picture?: string;
+          given_name?: string;
+          family_name?: string;
+        };
+
+        googleProfile = {
+          googleId: userInfo.sub,
+          email: userInfo.email,
+          displayName: userInfo.name || userInfo.email.split("@")[0] || "Learner",
+          avatarUrl: userInfo.picture,
+        };
+      } else {
+        // Mock fallback for unit tests and local mock mode
+        googleProfile = {
+          googleId: (req.query.mockGoogleId as string) || `google_${code}`,
+          email: (req.query.mockEmail as string) || `learner_${code}@example.com`,
+          displayName: "Google Learner",
+          avatarUrl: "https://lh3.googleusercontent.com/a/default",
+        };
       }
 
       const meta = {
