@@ -1,0 +1,14 @@
+node_modules
+.next
+.env
+.env.*
+!.env.example
+*.log
+tests
+coverage
+.nyc_output
+*.md
+.git
+.gitignore
+.eslintrc*
+vitest.config*

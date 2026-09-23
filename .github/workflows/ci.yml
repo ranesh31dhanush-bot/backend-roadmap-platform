@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build, Lint & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Shared Types
+        run: npm run build:shared
+
+      - name: Typecheck Workspace
+        run: npm run typecheck
+
+      - name: Lint Workspace
+        run: npm run lint
+
+      - name: Run Backend Integration Suite
+        run: npm run test:integration
+        env:
+          NODE_ENV: test
+          MONGODB_URI: mongodb://localhost:27017/test-ci-db
+          JWT_ACCESS_SECRET: dev_jwt_access_secret_min_32_characters_long_12345
+          JWT_REFRESH_SECRET: dev_jwt_refresh_secret_min_32_characters_long_12345
+          COOKIE_SECRET: dev_cookie_signing_secret_min_32_characters_long_12345
+
+      - name: Build Backend Production Bundle
+        run: npm run build:backend
+
+      - name: Build Frontend Production Bundle
+        run: npm run build:frontend
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+          NEXT_PUBLIC_API_URL: http://localhost:5000

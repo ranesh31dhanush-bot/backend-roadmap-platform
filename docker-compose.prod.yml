@@ -1,0 +1,97 @@
+# =============================================================================
+# docker-compose.prod.yml — Production Environment
+# Top 1% Backend Roadmap Platform
+# =============================================================================
+# Usage: docker compose -f docker-compose.prod.yml up --build
+#
+# SECURITY REQUIREMENTS before deploying:
+#   - All secrets must be provided via environment variables or .env.production
+#   - MONGODB_URI must point to a production MongoDB Atlas cluster
+#   - JWT_ACCESS_SECRET / JWT_REFRESH_SECRET / COOKIE_SECRET must be 64+ char random strings
+#   - COOKIE_SECURE must be "true" (HTTPS required in production)
+#   - COOKIE_DOMAIN must match your production domain
+#
+# NOTE: MongoDB is NOT included — the platform uses MongoDB Atlas.
+# =============================================================================
+
+version: "3.9"
+
+services:
+  # ── Backend API ─────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: runtime    # prod: use minimal runtime stage
+    image: top1-backend:latest
+    container_name: top1-backend
+    environment:
+      NODE_ENV: production
+      PORT: "5000"
+      # Override these via .env.production or CI/CD secrets:
+      # MONGODB_URI
+      # JWT_ACCESS_SECRET
+      # JWT_REFRESH_SECRET
+      # COOKIE_SECRET
+      # COOKIE_DOMAIN
+      COOKIE_SECURE: "true"
+      LOG_LEVEL: "info"
+    env_file:
+      - .env.production  # Must exist — provides production secrets
+    ports:
+      - "5000:5000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/health/live', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    restart: always
+    # Security: no source code mounts in production
+    # Security: read-only root filesystem where possible
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          memory: 256M
+
+  # ── Frontend ─────────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      target: runtime    # prod: use minimal standalone runtime
+    image: top1-frontend:latest
+    container_name: top1-frontend
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      NEXT_TELEMETRY_DISABLED: "1"
+    env_file:
+      - .env.production
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/', (r) => process.exit(r.statusCode < 500 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    restart: always
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 512M
+        reservations:
+          memory: 256M

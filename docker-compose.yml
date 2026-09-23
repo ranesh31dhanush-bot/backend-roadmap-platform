@@ -1,0 +1,67 @@
+# =============================================================================
+# docker-compose.yml — Development Environment
+# Top 1% Backend Roadmap Platform
+# =============================================================================
+# Usage: docker compose up
+#
+# NOTE: MongoDB is NOT included here — the platform uses MongoDB Atlas.
+#       Set MONGODB_URI in .env to your Atlas connection string.
+# =============================================================================
+
+version: "3.9"
+
+services:
+  # ── Backend API ─────────────────────────────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      target: builder    # dev: use builder stage for tsx watch capability
+    image: top1-backend:dev
+    container_name: top1-backend-dev
+    environment:
+      NODE_ENV: development
+      PORT: "5000"
+      FRONTEND_URL: "http://localhost:3000"
+      BACKEND_URL: "http://localhost:5000"
+    env_file:
+      - .env             # Provides MONGODB_URI, JWT_ACCESS_SECRET, etc.
+    ports:
+      - "5000:5000"
+    volumes:
+      # Mount source for hot-reload in development
+      - ./backend/src:/app/backend/src:ro
+      - ./shared/src:/app/shared/src:ro
+    command: ["npx", "tsx", "watch", "backend/src/server.ts"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:5000/health/live', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    restart: unless-stopped
+
+  # ── Frontend ─────────────────────────────────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      target: deps       # dev: deps stage with source mount
+    image: top1-frontend:dev
+    container_name: top1-frontend-dev
+    environment:
+      NODE_ENV: development
+      PORT: "3000"
+      NEXT_PUBLIC_API_URL: "http://localhost:5000"
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app/frontend:ro
+      - ./shared/src:/app/shared/src:ro
+    command: ["npm", "run", "dev", "--workspace=frontend"]
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
