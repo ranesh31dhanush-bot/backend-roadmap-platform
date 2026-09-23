@@ -58,6 +58,11 @@ export function createApp(): Express {
   // CSRF Protection on mutating endpoints
   app.use(csrfGuard);
 
+  // Root probe for keep-alive pingers (UptimeRobot, cron-job.org, PaaS root probes)
+  app.get("/", (_req, res) => {
+    res.status(200).json({ status: "ok", message: "Top 1% Backend Roadmap API is live", timestamp: new Date().toISOString() });
+  });
+
   // Health Probes (no /api/v1 prefix for standard k8s/paas monitoring)
   app.use("/health", healthRoutes);
 
