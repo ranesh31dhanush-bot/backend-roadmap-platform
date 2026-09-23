@@ -12,7 +12,9 @@
     "dev": "npm run dev --workspaces --if-present",
     "dev:backend": "npm run dev --workspace=backend",
     "dev:frontend": "npm run dev --workspace=frontend",
-    "build": "npm run build --workspaces --if-present",
+    "start": "node backend/dist/server.js",
+    "build": "npm run build:shared && npm run build:backend",
+    "build:all": "npm run build --workspaces --if-present",
     "build:shared": "npm run build --workspace=shared",
     "build:backend": "npm run build --workspace=backend",
     "build:frontend": "npm run build --workspace=frontend",
@@ -24,10 +26,12 @@
     "test:e2e": "playwright test",
     "clean": "npm run clean --workspaces --if-present"
   },
+  "dependencies": {
+    "@types/node": "^22.13.1",
+    "typescript": "^5.7.3"
+  },
   "devDependencies": {
     "@playwright/test": "^1.50.0",
-    "@types/node": "^22.13.1",
-    "prettier": "^3.4.2",
-    "typescript": "^5.7.3"
+    "prettier": "^3.4.2"
   }
 }
