@@ -1,0 +1,24 @@
+name: Keep Render Backend Awake
+
+on:
+  schedule:
+    # Runs every 10 minutes (Render sleeps after 15 minutes of inactivity)
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+jobs:
+  ping-backend:
+    name: Ping Render Health Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Keep-Alive Ping
+        env:
+          BACKEND_URL: ${{ vars.BACKEND_URL || secrets.BACKEND_URL }}
+        run: |
+          if [ -z "$BACKEND_URL" ]; then
+            echo "ℹ️ BACKEND_URL variable not configured yet. Add repository variable BACKEND_URL with your Render URL (e.g. https://your-app.onrender.com)."
+            exit 0
+          fi
+          echo "Pinging $BACKEND_URL/health..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$BACKEND_URL/health" || echo "failed")
+          echo "Response code: $HTTP_STATUS"

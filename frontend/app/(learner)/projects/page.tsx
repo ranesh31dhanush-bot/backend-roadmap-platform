@@ -13,13 +13,6 @@ const DIFFICULTY_CONFIG = {
 
 const PHASE_COLORS = ["#58a6ff", "#00e676", "#f0a500", "#bc8cff"];
 
-function TechBadge({ name }: { name: string }) {
-  return (
-    <span className="inline-block text-[10px] font-mono px-2 py-0.5 rounded border border-[#30363d] bg-[#21262d] text-[#8b949e]">
-      {name}
-    </span>
-  );
-}
 
 function CapstoneCard({ project }: { project: CapstoneProjectDTO }) {
   const difficulty = DIFFICULTY_CONFIG[project.difficulty];
